@@ -14,6 +14,7 @@ warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning
 wd = {working directory}
 auction_list = pd.read_csv(os.path.join(wd, 'auction_df.csv'), encoding='utf-8-sig')
 search_info = auction_list[['court', 'case_no', 'search_year', 'search_no']].dropna(axis=0, ignore_index=True)
+search_info = search_info.drop_duplicates(['case_no'], keep='first', ignore_index=True)
 search_info.update({col: search_info[col].astype(int).astype(str) for col in ['search_year', 'search_no']})
 
 test_search = search_info.iloc[:100, :]
@@ -52,12 +53,18 @@ for i in range(len(test_search)):
     try:
         # 상세페이지 이동
         driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_grd_gdsDtlSrchResult_cell_0_3"]/nobr/div/a').click()
-        time.sleep(random.uniform(1, 1.5))
+        time.sleep(random.uniform(2, 2.5))
     except:
         # 물건 상세 검색으로 돌아가기
-        driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_prevPage"]')[0].click()
-        time.sleep(random.uniform(0.5, 1))
-        continue
+        try:
+            driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_prevPage"]')[0].click()
+            time.sleep(random.uniform(1, 1.5))
+            continue
+        except:
+            time.sleep(random.uniform(1, 1.5))
+            driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_prevPage"]')[0].click()
+            time.sleep(random.uniform(1, 1.5))
+            continue
 
     # 물건 정보 크롤링
     data = {
@@ -86,9 +93,9 @@ for i in range(len(test_search)):
 
     # 물건 상세 검색으로 돌아가기
     driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_trigger1"]')[0].click()
-    time.sleep(random.uniform(0.5, 1))
+    time.sleep(random.uniform(1.5, 2))
     driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_prevPage"]')[0].click()
-    time.sleep(random.uniform(0.5, 1))
+    time.sleep(random.uniform(1, 1.5))
 
 df = pd.DataFrame(data_list)
 

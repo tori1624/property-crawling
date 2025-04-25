@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 
 import warnings
-warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # 사건 번호 가져오기 (추후에는 DB 활용 방법으로 코드 수정 필요)
 wd = {working directory}

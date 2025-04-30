@@ -2,7 +2,6 @@ import os
 import time
 import random
 import pandas as pd
-import numpy as np
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
@@ -11,17 +10,18 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # 사건 번호 가져오기 (추후에는 DB 활용 방법으로 코드 수정 필요)
-wd = {working directory}
+wd = 'C:/Users/YU.LEE/PycharmProjects/PythonProject/skykey/'
 auction_list = pd.read_csv(os.path.join(wd, 'auction_df.csv'), encoding='utf-8-sig')
-search_info = auction_list[['court', 'case_no', 'search_year', 'search_no']].dropna(axis=0, ignore_index=True)
+search_info = auction_list[['court', 'case_no', 'search_year', 'search_no', 'sale_date']].dropna(axis=0, ignore_index=True)
 search_info = search_info.drop_duplicates(['case_no'], keep='first', ignore_index=True)
 search_info.update({col: search_info[col].astype(int).astype(str) for col in ['search_year', 'search_no']})
 
-test_search = search_info.iloc[:100, :]
+test_search = search_info.loc[search_info['sale_date'] == '2025.05.02', :].reset_index(drop=True)
 
 # 크롬 드라이버 옵션
 options = webdriver.ChromeOptions()
 options.add_argument('headless')
+options.add_argument("--start-maximized")
 
 # 크롬 드라이버 및 웹페이지 실행
 driver = webdriver.Chrome(options=options)
@@ -31,8 +31,69 @@ driver.get('https://www.courtauction.go.kr/pgj/index.on')
 driver.find_element(By.XPATH, '//*[@id="mf_wq_uuid_260"]').click()
 time.sleep(random.uniform(0.5, 1))
 
-data_list = []
+# 빈 데이터 생성
+basicData_list = [] # 기본 물건 정보
 
+crawling_infos = {
+    'date': { # 기일내역
+        'columns': ['case_no', 'date', 'date_type', 'place', 'min_bid_price', 'result'],
+        'table_summary': "//table[@summary='기일내역']",
+        'df': pd.DataFrame()
+    },
+    'list': { # 목록내역
+        'columns': ['case_no', 'list_no', 'list_type', 'details'],
+        'table_summary': "//table[@summary='목록내역']",
+        'df': pd.DataFrame()
+    },
+    'saleStat': { # 인근매각통계
+        'columns': ['case_no', 'period', 'sale_count', 'avg_appraisal', 'avg_sale_price', 'sale_price_rate', 'avg_unsuccessful'],
+        'table_summary': "//table[@summary='인근매각통계']",
+        'df': pd.DataFrame()
+    },
+    'saleItem': { # 인근매각물건
+        'columns': ['case_no', 'near_case_no', 'usage', 'address/info', 'appraisal_price', 'sale_month', 'sale_price'],
+        'table_summary': "//table[@summary='인근매각물건']",
+        'df': pd.DataFrame()
+    },
+    'claimDead': { # 배당요구종기내역
+        'columns': ['case_no', 'list_no', 'address', 'claim_deadline'],
+        'table_summary': "//table[@summary='배당요구 종기내역']",
+        'df': pd.DataFrame()
+    },
+    'party': { # 당사자 내역
+        'columns': ['case_no', 'party_type1', 'party_name1', 'party_type2', 'party_name2'],
+        'table_summary': "//table[@summary='당사자 내역']",
+        'df': pd.DataFrame()
+    },
+    'docs': { # 문건처리내역
+        'columns': ['case_no', 'received_date', 'receipt_detail', 'receipt_result'],
+        'table_summary': "//table[@summary='문건처리 내역']",
+        'df': pd.DataFrame()
+    },
+    'service': { # 송달내역
+        'columns': ['case_no', 'service_date', 'service_detail', 'service_result'],
+        'table_summary': "//table[@summary='송달 내역']",
+        'df': pd.DataFrame()
+    }
+}
+
+# 크롤링 함수 생성
+def crawling_table(case_no, table_info):
+    table = driver.find_element(By.XPATH, table_info['table_summary'])
+    rows = table.find_elements(By.TAG_NAME, 'tr')
+
+    tmp_data = []
+    for row in rows:
+        cells = row.find_elements(By.TAG_NAME, 'td')
+        if cells:  # 셀이 있는 경우에만
+            row_data = [case_no] + [cell.text.strip() for cell in cells]
+            tmp_data.append(row_data)
+
+    tmp_df = pd.DataFrame(tmp_data, columns=table_info['columns'])
+    table_info['df'] = pd.concat([table_info['df'], tmp_df], ignore_index=True)
+
+start = time.time()
+# 크롤링 진행
 for i in range(len(test_search)):
     # 법원 지정
     setCourt = Select(driver.find_element(By.ID, 'mf_wfm_mainFrame_sbx_rletCortOfc'))
@@ -48,7 +109,7 @@ for i in range(len(test_search)):
 
     # 물건 검색
     driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_gdsDtlSrch"]').click()
-    time.sleep(random.uniform(0.5, 1))
+    time.sleep(random.uniform(1, 1.5))
 
     try:
         # 상세페이지 이동
@@ -66,8 +127,8 @@ for i in range(len(test_search)):
             time.sleep(random.uniform(1, 1.5))
             continue
 
-    # 물건 정보 크롤링
-    data = {
+    # 기본 물건 정보 크롤링
+    basicData = {
         'case_no': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchUserCsNo').text,
         'item_no': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchGdsSeq').text,
         'usage': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchGdsKnd').text,
@@ -76,7 +137,6 @@ for i in range(len(test_search)):
         'bid_method': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchBidDvs').text,
         'sale_date': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchDspslDxdy').text,
         'item_remarks': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchRmk').text,
-        'address': driver.find_element('id', 'mf_wfm_mainFrame_gen_lstSt_0_spn_gdsDtlSrchStCtt').text,
         'court_department': (
             driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchCortNm').text + ' ' +
             driver.find_element('id', 'mf_wfm_mainFrame_spn_cortAuctnJdbnNm').text.replace('|', '').strip()
@@ -84,19 +144,52 @@ for i in range(len(test_search)):
         'case_filed_date': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchCsRcptYmd').text,
         'auction_start_date': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchAuctnStrtDay').text,
         'claim_deadline': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchDstrtDemnLstprd').text,
-        'claim_amount': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchClmAmt').text
+        'claim_price': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchClmAmt').text
     }
 
-    data_list.append(data)
+    basicData_list.append(basicData)
+
+    # 기일내역 크롤링
+    crawling_table(test_search['case_no'][i], crawling_infos['date'])
+
+    # 목록내역 크롤링
+    crawling_table(test_search['case_no'][i], crawling_infos['list'])
+
+    # 인근매각통계 크롤링
+    crawling_table(test_search['case_no'][i], crawling_infos['saleStat'])
+
+    # 인근매각물건 크롤링
+    driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_tac_aroundGdsExm_tab_tabs2_tabHTML"]').click()
+    time.sleep(random.uniform(0.2, 0.5))
+    crawling_table(test_search['case_no'][i], crawling_infos['saleItem'])
+
+    # 사건상세조회 클릭
+    driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_moveCsDtl"]').click()
+    time.sleep(random.uniform(0.5, 1))
+
+    # 배당요구종기내역 크롤링
+    crawling_table(test_search['case_no'][i], crawling_infos['claimDead'])
+
+    # 당사자내역 크롤링
+    crawling_table(test_search['case_no'][i], crawling_infos['party'])
+
+    # 문건/송달내역 클릭
+    driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_tac_srchRsltDvs_tab_tabs3_tabHTML"]').click()
+    time.sleep(random.uniform(0.5, 1))
+
+    # 문건처리내역 크롤링
+    crawling_table(test_search['case_no'][i], crawling_infos['docs'])
+
+    # 송달내역 크롤링
+    crawling_table(test_search['case_no'][i], crawling_infos['service'])
 
     print(f"{test_search['court'][i]} {test_search['case_no'][i]} 완료")
 
     # 물건 상세 검색으로 돌아가기
-    driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_trigger1"]')[0].click()
-    time.sleep(random.uniform(1.5, 2))
-    driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_prevPage"]')[0].click()
+    driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_wfm_sideMenu_spn_gdsDtlSrch"]')[0].click()
     time.sleep(random.uniform(1, 1.5))
 
-df = pd.DataFrame(data_list)
+basic_df = pd.DataFrame(basicData_list)
+end = time.time()
 
 driver.quit()

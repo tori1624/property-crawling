@@ -45,6 +45,13 @@ crawling_infos = {
         'table_summary': "//table[@summary='목록내역']",
         'df': pd.DataFrame()
     },
+    'car': {
+        'columns': ['case_no', 'list_no', 'appraisal_price', 'car_name', 'car_type', 'registration_no', 'year',
+                    'manufacturer', 'fuel_type', 'transmission', 'engine_type', 'approval_no', 'vin', 'displacement',
+                    'mileage', 'storage_place'],
+        'table_summary': "//table[@summary='물건내역']",
+        'df': pd.DataFrame()
+    },
     'saleStat': { # 인근매각통계
         'columns': ['case_no', 'period', 'sale_count', 'avg_appraisal', 'avg_sale_price', 'sale_price_rate', 'avg_unsuccessful'],
         'table_summary': "//table[@summary='인근매각통계']",
@@ -92,9 +99,30 @@ def crawling_table(case_no, table_info):
     tmp_df = pd.DataFrame(tmp_data, columns=table_info['columns'])
     table_info['df'] = pd.concat([table_info['df'], tmp_df], ignore_index=True)
 
-start = time.time()
+def crawling_car_detail(case_no, table_info):
+    table = driver.find_element(By.XPATH, table_info['table_summary'])
+    rows = table.find_elements(By.TAG_NAME, 'tr')
+
+    data_dict = {'case_no': case_no}
+    for row in rows:
+        ths = row.find_elements(By.TAG_NAME, 'th')
+        tds = row.find_elements(By.TAG_NAME, 'td')
+        for th, td in zip(ths, tds):
+            key = th.text.strip()
+            val = td.text.strip()
+            if key:  # 빈 key 무시
+                data_dict[key] = val
+
+    tmp_df = pd.DataFrame([data_dict])
+    tmp_df.columns = table_info['columns']
+    table_info['df'] = pd.concat([table_info['df'], tmp_df], ignore_index=True)
+
+
 # 크롤링 진행
 for i in range(len(test_search)):
+
+    case_no = test_search['court'][i] + ' ' + test_search['case_no'][i]
+
     # 법원 지정
     setCourt = Select(driver.find_element(By.ID, 'mf_wfm_mainFrame_sbx_rletCortOfc'))
     setCourt.select_by_visible_text(test_search['court'][i])
@@ -129,7 +157,7 @@ for i in range(len(test_search)):
 
     # 기본 물건 정보 크롤링
     basicData = {
-        'case_no': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchUserCsNo').text,
+        'case_no': case_no,
         'item_no': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchGdsSeq').text,
         'usage': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchGdsKnd').text,
         'appraisal_price': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchAeeEvlAmt').text,
@@ -150,38 +178,51 @@ for i in range(len(test_search)):
     basicData_list.append(basicData)
 
     # 기일내역 크롤링
-    crawling_table(test_search['case_no'][i], crawling_infos['date'])
+    crawling_table(case_no, crawling_infos['date'])
 
     # 목록내역 크롤링
-    crawling_table(test_search['case_no'][i], crawling_infos['list'])
+    try:
+        crawling_table(case_no, crawling_infos['list'])
+    except:
+        crawling_car_detail(case_no, crawling_infos['car'])
 
     # 인근매각통계 크롤링
-    crawling_table(test_search['case_no'][i], crawling_infos['saleStat'])
+    crawling_table(case_no, crawling_infos['saleStat'])
 
     # 인근매각물건 크롤링
     driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_tac_aroundGdsExm_tab_tabs2_tabHTML"]').click()
     time.sleep(random.uniform(0.2, 0.5))
-    crawling_table(test_search['case_no'][i], crawling_infos['saleItem'])
+    crawling_table(case_no, crawling_infos['saleItem'])
 
     # 사건상세조회 클릭
     driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_moveCsDtl"]').click()
     time.sleep(random.uniform(0.5, 1))
 
     # 배당요구종기내역 크롤링
-    crawling_table(test_search['case_no'][i], crawling_infos['claimDead'])
+    crawling_table(case_no, crawling_infos['claimDead'])
 
     # 당사자내역 크롤링
-    crawling_table(test_search['case_no'][i], crawling_infos['party'])
+    crawling_table(case_no, crawling_infos['party'])
 
     # 문건/송달내역 클릭
-    driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_tac_srchRsltDvs_tab_tabs3_tabHTML"]').click()
-    time.sleep(random.uniform(0.5, 1))
+    try:
+        driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_tac_srchRsltDvs_tab_tabs3_tabHTML"]').click()
+        time.sleep(random.uniform(0.5, 1))
+
+    except:
+        print(f"{test_search['court'][i]} {test_search['case_no'][i]} 문건/송달내역 크롤링 실패")
+        # 물건 상세 검색으로 돌아가기
+        driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_prevBtn"]')[0].click()
+        time.sleep(random.uniform(1, 1.5))
+        driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_prevPage"]')[0].click()
+        time.sleep(random.uniform(0.5, 1))
+        continue
 
     # 문건처리내역 크롤링
-    crawling_table(test_search['case_no'][i], crawling_infos['docs'])
+    crawling_table(case_no, crawling_infos['docs'])
 
     # 송달내역 크롤링
-    crawling_table(test_search['case_no'][i], crawling_infos['service'])
+    crawling_table(case_no, crawling_infos['service'])
 
     print(f"{test_search['court'][i]} {test_search['case_no'][i]} 완료")
 
@@ -190,6 +231,17 @@ for i in range(len(test_search)):
     time.sleep(random.uniform(1, 1.5))
 
 basic_df = pd.DataFrame(basicData_list)
-end = time.time()
 
 driver.quit()
+
+# 데이터 저장
+basic_df.to_csv('detailInfo_basic.csv', index=False, encoding='utf-8-sig')
+crawling_infos['date']['df'].to_csv('detailInfo_date.csv', index=False, encoding='utf-8-sig')
+crawling_infos['list']['df'].to_csv('detailInfo_list.csv', index=False, encoding='utf-8-sig')
+crawling_infos['saleStat']['df'].to_csv('detailInfo_saleStat.csv', index=False, encoding='utf-8-sig')
+crawling_infos['saleItem']['df'].to_csv('detailInfo_saleItem.csv', index=False, encoding='utf-8-sig')
+crawling_infos['claimDead']['df'].to_csv('detailInfo_claim.csv', index=False, encoding='utf-8-sig')
+crawling_infos['party']['df'].to_csv('detailInfo_party.csv', index=False, encoding='utf-8-sig')
+crawling_infos['docs']['df'].to_csv('detailInfo_docs.csv', index=False, encoding='utf-8-sig')
+crawling_infos['service']['df'].to_csv('detailInfo_service.csv', index=False, encoding='utf-8-sig')
+crawling_infos['car']['df'].to_csv('detailInfo_car.csv', index=False, encoding='utf-8-sig')

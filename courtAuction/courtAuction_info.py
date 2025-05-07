@@ -4,7 +4,9 @@ import random
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.select import Select
+from selenium.webdriver.common.action_chains import ActionChains
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -180,10 +182,23 @@ for i in range(len(test_search)):
 
     iframe = driver.find_element(By.ID, 'sbx_iframeTest')
     driver.switch_to.frame(iframe)
-    time.sleep(random.uniform(0.2, 0.5))
+    time.sleep(random.uniform(0.2, 0.3))
     basicData['appraisal_pdf'] = driver.find_element(By.TAG_NAME, 'iframe').get_attribute('src')
     driver.switch_to.default_content()
-    time.sleep(random.uniform(0.2, 0.5))
+    time.sleep(random.uniform(0.2, 0.3))
+    ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+
+    # 매각물건명세서 링크 크롤링
+    try:
+        driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_dspslGdsSpcfc1"]').click()
+        time.sleep(random.uniform(0.2, 0.3))
+        driver.switch_to.window(driver.window_handles[1])
+        time.sleep(random.uniform(0.2, 0.3))
+        basicData['saleItem_url'] = driver.current_url
+        driver.switch_to.window(driver.window_handles[0])
+    except:
+        basicData['saleItem_url'] = ''
+        print(f'{case_no} 매각물건명세서 없음')
 
     basicData_list.append(basicData)
 

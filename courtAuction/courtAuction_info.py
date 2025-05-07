@@ -175,6 +175,16 @@ for i in range(len(test_search)):
         'claim_price': driver.find_element('id', 'mf_wfm_mainFrame_spn_gdsDtlSrchClmAmt').text
     }
 
+    # 감정평가서 링크 크롤링
+    driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_aeeWevl1"]').click()
+
+    iframe = driver.find_element(By.ID, 'sbx_iframeTest')
+    driver.switch_to.frame(iframe)
+    time.sleep(random.uniform(0.2, 0.5))
+    basicData['appraisal_pdf'] = driver.find_element(By.TAG_NAME, 'iframe').get_attribute('src')
+    driver.switch_to.default_content()
+    time.sleep(random.uniform(0.2, 0.5))
+
     basicData_list.append(basicData)
 
     # 기일내역 크롤링

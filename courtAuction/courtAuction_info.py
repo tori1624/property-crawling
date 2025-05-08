@@ -182,7 +182,7 @@ for i in range(len(test_search)):
 
     iframe = driver.find_element(By.ID, 'sbx_iframeTest')
     driver.switch_to.frame(iframe)
-    time.sleep(random.uniform(0.2, 0.3))
+    time.sleep(random.uniform(0.5, 1))
     basicData['appraisal_pdf'] = driver.find_element(By.TAG_NAME, 'iframe').get_attribute('src')
     driver.switch_to.default_content()
     time.sleep(random.uniform(0.2, 0.3))

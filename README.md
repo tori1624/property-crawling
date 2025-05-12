@@ -11,6 +11,9 @@
 
 2. **Jumpoline** ([Link](https://www.jumpoline.com/))  
    - 점포 매매 관련 정보 : 지역, 면적, 권리금, 월수익 등
+  
+3. **아싸점포거래소** ([Link](https://xn--v69ap5so3hsnb81e1wfh6z.com/))  
+   - 점포 매매 관련 정보 : 보증금, 월세, 권리금, 월매출, 월수익 등
 
 <br/>
 
@@ -27,6 +30,8 @@
 ## 📁 폴더 구조
 ```
 property-crawling/
+├── assajumpo/
+│ └── assajumpo_list.py
 ├── courtAuction/
 │ └── courtAuction_info.py
 │ └── courtAuction_list.py

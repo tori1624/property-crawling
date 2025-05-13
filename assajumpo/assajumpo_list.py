@@ -15,7 +15,7 @@ driver.get('https://xn--v69ap5so3hsnb81e1wfh6z.com/grid')
 
 # 업종 선택
 driver.find_element(By.XPATH, '//*[@id="form_search"]/div[2]/div/div[3]/div[2]').click()
-driver.find_element(By.XPATH, '//*[@id="tab_40"]/div[10]').click()
+driver.find_element(By.XPATH, '//*[@id="tab_40"]/div[1]').click()
 driver.find_element(By.XPATH, '//*[@id="form_search"]/div[2]/div/div[3]/div[2]').click()
 
 # 스크롤할 div 선택자
@@ -29,7 +29,7 @@ while True:
         const container = document.querySelector('{scroll_container_selector}');
         container.scrollTop = container.scrollHeight;
     """)
-    time.sleep(2)  # 콘텐츠 로딩 대기
+    time.sleep(1)  # 콘텐츠 로딩 대기
     new_height = driver.execute_script(f"return document.querySelector('{scroll_container_selector}').scrollHeight")
     if new_height == last_height:
         break
@@ -39,7 +39,72 @@ while True:
 items = driver.find_elements(By.CSS_SELECTOR, 'a.pointer.item')
 print(f"총 {len(items)}개의 항목을 찾았습니다.")
 
+data = []
+
 for item in items:
-    print(item.get_attribute('href'))
+    try:
+        category = item.find_element(By.CSS_SELECTOR, '.data-category').text.strip()
+        top_etcs = item.find_elements(By.CSS_SELECTOR, '.top_etcs')
+        floor = top_etcs[0].text.strip()
+        area = top_etcs[2].text.strip()
+
+        # 가격 정보
+        price_spans = item.find_elements(By.CSS_SELECTOR, '.data-price .price_span')
+        price_index = price_spans.index(
+            item.find_element(By.XPATH, ".//span[contains(text(),'월세')]/following-sibling::span")
+        )
+        if price_index == 3:
+            deposit = price_spans[0].text.strip() + price_spans[1].text.strip() + price_spans[2].text.strip()
+            rent = price_spans[3].text.strip() + price_spans[4].text.strip()
+        else:
+            deposit = price_spans[0].text.strip() + price_spans[1].text.strip()
+            rent = price_spans[2].text.strip() + price_spans[3].text.strip()
+
+        # 권리금은 무권리금일 경우 처리 필요
+        try:
+            premium_tag = item.find_element(By.CSS_SELECTOR, '.price_block.detail_0.price_premium')
+            premium_index = price_spans.index(
+                item.find_element(By.XPATH, ".//span[contains(text(),'권리금')]/following-sibling::span")
+            )
+            try:
+                premium = price_spans[premium_index].text.strip() + price_spans[premium_index + 1].text.strip() + price_spans[premium_index + 2].text.strip()
+            except:
+                premium = price_spans[premium_index].text.strip() + price_spans[premium_index + 1].text.strip()
+        except:
+            premium = item.find_element(By.CSS_SELECTOR, '.price_span.price_premium_no.m-r-xs').text.strip()
+
+        # 매출과 수익
+        try:
+            sales_info = item.find_element(By.CSS_SELECTOR, '.data-sales').text.strip()
+            sales, profit = sales_info.replace('월매출', '').replace('월수익', '').replace(' ', '').split('/')
+        except:
+            sales = ''
+            profit = ''
+
+        # 링크
+        href = item.get_attribute('href')
+
+        data.append({
+            'category': category,
+            'floor': floor,
+            'area': area,
+            'deposit': deposit,
+            'rent': rent,
+            'premium': premium,
+            'sales': sales,
+            'profit': profit,
+            'url': href
+        })
+
+    except Exception as e:
+        print("Error parsing item:", e)
+        continue
+
+    print(href)
+
+print(f'{category} 크롤링 완료')
+df = pd.DataFrame(data)
+dup_df = df.drop_duplicates(['url'], keep='first', ignore_index=True)
+
 
 driver.quit()

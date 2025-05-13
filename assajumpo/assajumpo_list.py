@@ -14,6 +14,7 @@ driver = webdriver.Chrome(options=options)
 driver.get('https://xn--v69ap5so3hsnb81e1wfh6z.com/grid')
 
 # 업종 선택
+# 외식업 - 스크롤 내리는 과정 15분 (11,508) -> 2시간
 driver.find_element(By.XPATH, '//*[@id="form_search"]/div[2]/div/div[3]/div[2]').click()
 driver.find_element(By.XPATH, '//*[@id="tab_40"]/div[1]').click()
 driver.find_element(By.XPATH, '//*[@id="form_search"]/div[2]/div/div[3]/div[2]').click()
@@ -50,15 +51,19 @@ for item in items:
 
         # 가격 정보
         price_spans = item.find_elements(By.CSS_SELECTOR, '.data-price .price_span')
-        price_index = price_spans.index(
-            item.find_element(By.XPATH, ".//span[contains(text(),'월세')]/following-sibling::span")
-        )
-        if price_index == 3:
-            deposit = price_spans[0].text.strip() + price_spans[1].text.strip() + price_spans[2].text.strip()
-            rent = price_spans[3].text.strip() + price_spans[4].text.strip()
-        else:
+        try:
+            price_index = price_spans.index(
+                item.find_element(By.XPATH, ".//span[contains(text(),'월세')]/following-sibling::span")
+            )
+            if price_index == 3:
+                deposit = price_spans[0].text.strip() + price_spans[1].text.strip() + price_spans[2].text.strip()
+                rent = price_spans[3].text.strip() + price_spans[4].text.strip()
+            else:
+                deposit = price_spans[0].text.strip() + price_spans[1].text.strip()
+                rent = price_spans[2].text.strip() + price_spans[3].text.strip()
+        except:
             deposit = price_spans[0].text.strip() + price_spans[1].text.strip()
-            rent = price_spans[2].text.strip() + price_spans[3].text.strip()
+            rent = ''
 
         # 권리금은 무권리금일 경우 처리 필요
         try:
@@ -105,6 +110,5 @@ for item in items:
 print(f'{category} 크롤링 완료')
 df = pd.DataFrame(data)
 dup_df = df.drop_duplicates(['url'], keep='first', ignore_index=True)
-
 
 driver.quit()

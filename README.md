@@ -32,9 +32,12 @@ property-crawling/
 ├── assajumpo/
 │ └── assajumpo_list.py
 ├── courtAuction/
-│ └── courtAuction_info.py
-│ └── courtAuction_list.py
-│ └── courtAuction_list_old.py
+│ ├── auction/
+│ │ └── __init__.py
+│ │ └── auction_info.py
+│ │ └── auction_list.py
+│ │ └── crawling_utils.py
+│ └── main.py
 ├── jumpoline/
 │ └── jumpoline_home.py
 │ └── jumpoline_type.py
@@ -49,7 +52,9 @@ git clone https://github.com/tori1624/property-crawling.git
 cd property-crawling
 
 # 예: 대법원 경매 리스트 크롤링 실행
-python courtAuction/courtAuction_list.py
+cd courtAuction
+python main.py list
+python main.py info
 ```
 
 <br/>

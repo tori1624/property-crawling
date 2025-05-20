@@ -15,7 +15,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def auction_info():
     # 사건 번호 가져오기 (추후에는 DB 활용 방법으로 코드 수정 필요)
-    wd = 'C:/Users/YU.LEE/PycharmProjects/PythonProject/skykey/data'
+    wd = {working directory}
     auction_list = pd.read_csv(os.path.join(wd, 'auction_df.csv'), encoding='utf-8-sig')
     search_info = auction_list[['court', 'case_no', 'search_year', 'search_no', 'sale_date']].dropna(axis=0, ignore_index=True)
     search_info = search_info.drop_duplicates(['case_no'], keep='first', ignore_index=True)

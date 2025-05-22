@@ -118,6 +118,10 @@ def auction_list():
                 if page == last_page:  # 마지막 페이지일 경우 종료
                     print(f'{use} - 총 {page} 완료')
                     break
+                elif page % 500 == 0:  # 500 단위 페이지일 경우, 3분 쉬고 다음 페이지 목록으로 이동
+                    time.sleep(180)
+                    driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_pgl_gdsDtlSrchPage_next_btn"]/button').click()
+                    page += 1
                 elif page % 10 == 0:  # 10 단위 페이지일 경우, 다음 페이지 목록으로 이동
                     driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_pgl_gdsDtlSrchPage_next_btn"]/button').click()
                     page += 1

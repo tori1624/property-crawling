@@ -17,7 +17,7 @@ headers = {
 results = []
 jumpo_df = pd.DataFrame()
 
-for dong_id in range(1, 5000):
+for dong_id in range(1, 5500):
 
     payload = {"dong_id": str(dong_id)}
 
@@ -27,6 +27,7 @@ for dong_id in range(1, 5000):
         response_df = pd.DataFrame(response.json())
         data = response_df.empty
         tmp_df = pd.json_normalize(response_df['item'])
+
     except Exception as e:
         status = f"error: {str(e)}"
 
@@ -36,12 +37,21 @@ for dong_id in range(1, 5000):
         "data_empty": data
     })
 
-    jumpo_df = pd.concat([jumpo_df, tmp_df], ignore_index=True) # mtype : general(직거래 매물), biz(부동산 매물)
+    jumpo_df = pd.concat([jumpo_df, tmp_df], ignore_index=True)
 
     print(f'{dong_id}: {status}, {data}')
 
     # 서버에 과부하 주지 않도록 약간 대기
     time.sleep(0.5)
 
-# status 결과를 Data Frame으로 변환
+# status 결과를 Data Frame으로 변환 (크롤링 확인용)
 df_status = pd.DataFrame(results)
+
+# 추가 전처리 (변수 정리)
+assajumpo_df = jumpo_df.drop(columns=[
+    col for col in jumpo_df.columns
+    if jumpo_df[col].replace('', pd.NA).isna().all()
+])
+
+# 데이터 저장
+assajumpo_df.to_csv('assajumpo_df.csv', index=False, encoding='utf-8-sig')

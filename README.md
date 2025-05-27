@@ -38,6 +38,7 @@ property-crawling/
 │ │ └── auction_list.py
 │ │ └── crawling_utils.py
 │ └── main.py
+│ └── requirements.txt
 ├── jumpoline/
 │ └── jumpoline_home.py
 │ └── jumpoline_type.py

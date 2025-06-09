@@ -1,3 +1,4 @@
+import re
 import time
 import requests
 import pandas as pd
@@ -47,11 +48,20 @@ for dong_id in range(1, 5500):
 # status 결과를 Data Frame으로 변환 (크롤링 확인용)
 df_status = pd.DataFrame(results)
 
-# 추가 전처리 (변수 정리)
+# 변수 정리
 assajumpo_df = jumpo_df.drop(columns=[
     col for col in jumpo_df.columns
     if jumpo_df[col].replace('', pd.NA).isna().all()
 ])
+
+# 월수익 변수 생성
+def extract_monthly_profit(html):
+    match = re.search(r'월수익\s*(-?[\d,]+)만', html)
+    if match:
+        return int(match.group(1).replace(',', ''))
+    return None
+
+assajumpo_df['p_monthly_profit'] = assajumpo_df['html_data'].apply(extract_monthly_profit)
 
 # 데이터 저장
 assajumpo_df.to_csv('assajumpo_df.csv', index=False, encoding='utf-8-sig')

@@ -113,6 +113,7 @@ for idx, row in sgg_df.iterrows():
                 'umd': umd_nm,
                 'code': umd_cd
             })
+        time.sleep(random.uniform(0.1, 0.2))
     except Exception as e:
         print(f"{row['sigungu']} 처리 중 오류 발생: {e}")
 
